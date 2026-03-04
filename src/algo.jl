@@ -37,7 +37,7 @@ width | type : Int64 | exemple : 49
 function successor(P::Tuple{Int64, Int64}, map)
     succ::Vector{Tuple{Int64,Int64}} = []
     for elem in [(P[1]-1,P[2]), (P[1]+1,P[2]), (P[1],P[2]+1), (P[1],P[2]-1)]
-        if isInMap(elem,size(map)[1],size(map[1])[1]) && poidsCase[map[elem[1]][elem[2]]] != -1
+        if isInMap(elem,size(map)[1],size(map[1])[1]) && poidsCase[map[elem[2]][elem[1]]] != -1     
             push!(succ,elem)
         end
     end
@@ -119,6 +119,4 @@ function algoBFS(fname::String, D::Tuple{Int64, Int64}, A::Tuple{Int64, Int64})
     return "Il n'existe pas de chemin de D -> A"                                         
 end   
 
-println(algoBFS("PathFinding/dat/dao-map/arena.map",(12,12),(15,14)))
-
-
+println(algoBFS("PathFinding/dat/dao-map/arena.map",(14,18),(22,18)))

@@ -278,3 +278,5 @@ end
 println(algoDijkstra("PathFinding/dat/dao-map/lak100c.map",(172,462),(201,446)),"\n")
 # println(algoGlouton("PathFinding/dat/dao-map/lak100c.map",(172,462),(201,446)),"\n")
 println(algoAstar("PathFinding/dat/dao-map/lak100c.map",(172,462),(201,446)),"\n")
+
+# test ssh

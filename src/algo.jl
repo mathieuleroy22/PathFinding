@@ -25,7 +25,27 @@ width | type : Int64 | exemple : 49
 =#
 function isInMap(P::Tuple{Int64, Int64}, height::Int64, width::Int64)
     return 0 <= P[1] <= width && 0 <= P[2] <= height 
-end 
+end
+
+function verificationInput(fname::String, D::Tuple{Int64, Int64}, A::Tuple{Int64, Int64})
+
+    # TODO vérifier si le fname est bien un fichier
+
+    # importe la carte et en déduit ses dimensions
+    map = importFile(fname)
+    height::Int64 = size(map)[1]
+    width::Int64 = size(map[1])[1]
+
+    # vérifie sur D et A sont bien sur la carte et qu'ils ne sont pas infranchissables
+    isInMap(D,height,width) || throw(ArgumentError("Le départ n'est pas sur la carte"))
+    isInMap(A,height,width) || throw(ArgumentError("L'arrivée n'est pas sur la carte"))
+
+    # vérifie si D et A sont des points accessibles
+    poidsCase[map[D[2]][D[1]]] != -1 || throw(ArgumentError("Le départ n'est pas accessible"))
+    poidsCase[map[A[2]][A[1]]] != -1 || throw(ArgumentError("L'arrivée n'est pas accessible"))
+
+    return map
+end
 
 #=
 Fonction retournant les successeurs possibles de P avec leur poids
@@ -54,6 +74,15 @@ function display(length_path::Int64, nb_states::Int64, path::Vector{Tuple{Int64,
     println(A)
 end
 
+#=
+Fonction retournant la distance entre les points P et A
+P | type : Tuple{Int64, Int64} | exemple : (12, 14)
+A | type : Tuple{Int64, Int64} | exemple : (11, 13)
+=#
+function lenghtToA(P::Tuple{Int64, Int64}, A::Tuple{Int64,Int64})
+    return sqrt((P[2]-A[2])^2 + (P[1]-A[1])^2)
+end
+
 # TODO Expliciter le raisonnement + faire les commentaires
 
 function base0to1(P::Tuple{Int64, Int64})
@@ -75,14 +104,7 @@ function algoBFS(fname::String, D::Tuple{Int64, Int64}, A::Tuple{Int64, Int64})
     D = base0to1(D)
     A = base0to1(A)
 
-    # importe la carte et en déduit ses dimensions
-    map = importFile(fname)
-    height::Int64 = size(map)[1]
-    width::Int64 = size(map[1])[1]
-
-    # vérifie sur D et A sont bien sur la carte
-    isInMap(D,height,width) || throw(ArgumentError("Le départ n'est pas sur la carte"))
-    isInMap(A,height,width) || throw(ArgumentError("L'arrivée n'est pas sur la carte"))
+    map = verificationInput(fname, D, A)
     
     # Début du parcours
     predecessor = Dict(D=>(-1,-1))                      # initialisation d'un dictionnaire avec le point de départ provenant d'un point non définie
@@ -96,14 +118,14 @@ function algoBFS(fname::String, D::Tuple{Int64, Int64}, A::Tuple{Int64, Int64})
 
         if u == A
             v = u
-            d = 0
+            c = 0
             path::Vector{Tuple{Int64,Int64}} = []
             while predecessor[v] != (-1,-1)
                 push!(path,base1to0(predecessor[v]))
+                c += poidsCase[map[v[2]][v[1]]]
                 v = predecessor[v]
-                d += 1
             end
-            display(d,states,path,base1to0(A))
+            display(c,states,path,base1to0(A))
             return "Il existe un chemin de D -> A"
 
         else
@@ -124,50 +146,85 @@ fname | type : String | exemple : "didactic.map"
 • D | type : Tuple{Int64, Int64} | exemple : (12, 14)
 • A | type : Tuple{Int64, Int64} | exemple : (4, 5)"
 =#
-function Dijkstra(fname::String, D::Tuple{Int64, Int64}, A::Tuple{Int64, Int64})
+function algoDijkstra(fname::String, D::Tuple{Int64, Int64}, A::Tuple{Int64, Int64}) 
+    
+    # conversion en base (1,1) -> c'est-à-dire que la coordonnée du point en haut à gauche est (1,1) 
+    D = base0to1(D) 
+    A = base0to1(A) 
+    
+    map = verificationInput(fname, D, A) 
+    
+    # Début du parcours
+    
+    L = PriorityQueue()                             # intialisation d'une file de priorité en fonction du poids pour au point 
+    predecessor = Dict(D=>((-1,-1),-1))             # initialisation d'un dictionnaire avec le point de départ provenant d'un point et d'un chemin non définie 
+    enqueue!(L, D, 0)                               # enfile le départ avec un poids de 0 
+    states = 0                                      # nombre d'états parcourus 
+    while !(isempty(L)) 
+        u = dequeue!(L) 
+        states += 1 
+        
+        if u == A 
+            v = u 
+            c = 0 
+            path::Vector{Tuple{Int64,Int64}} = [] 
+            while predecessor[v] != ((-1,-1),-1) 
+                push!(path,base1to0(predecessor[v][1])) 
+                c += poidsCase[map[v[2]][v[1]]] 
+                v = predecessor[v][1] 
+            end
+            display(c,states,path,base1to0(A)) 
+            return "Il existe un chemin de D -> A" 
+        else S = successor(u,map) 
+            for s in S 
+                cost = s[2] + predecessor[u][2] 
+                if !(haskey(predecessor,s[1])) && (!(haskey(L,s[1])) || L[s[1]] > cost) 
+                    L[s[1]] = cost 
+                    predecessor[s[1]] = (u,cost) 
+                end
+            end 
+        end
+    end
+    return "Il n'existe pas de chemin de D -> A" 
+end
+
+function algoGlouton(fname::String, D::Tuple{Int64, Int64}, A::Tuple{Int64, Int64})
 
     # conversion en base (1,1) -> c'est-à-dire que la coordonnée du point en haut à gauche est (1,1)
     D = base0to1(D)
     A = base0to1(A)
 
-    # importe la carte et en déduit ses dimensions
-    map = importFile(fname)
-    height::Int64 = size(map)[1]
-    width::Int64 = size(map[1])[1]
-
-    # vérifie sur D et A sont bien sur la carte
-    isInMap(D,height,width) || throw(ArgumentError("Le départ n'est pas sur la carte"))
-    isInMap(A,height,width) || throw(ArgumentError("L'arrivée n'est pas sur la carte"))
+    map = verificationInput(fname, D, A)
 
     # Début du parcours 
-    L = PriorityQueue()                                         # intialisation d'une file de priorité en fonction du poids pour au point
-    predecessor = Dict(D=>((-1,-1),-1))                         # initialisation d'un dictionnaire avec le point de départ provenant d'un point et d'un chemin non définie       
-    enqueue!(L, D, 0)                                           # enfile le départ avec un poids de 0
+    FilePrio = PriorityQueue()                                         # intialisation d'une file de priorité en fonction du poids pour au point
+    predecessor = Dict(D=>((-1,-1)))                            # initialisation d'un dictionnaire avec le point de départ provenant d'un point non définie avec sa distance en vol d'oiseau jusque FilePrio'arrivée      
+    enqueue!(FilePrio, D, lenghtToA(D,A))                              # enfile le départ avec sa distance par rapport à FilePrio'arrivée
     states = 0                                                  # nombre d'états parcourus
 
-    while !(isempty(L))
-        u = dequeue!(L)
+    while !(isempty(FilePrio))
+        u = dequeue!(FilePrio)
         states += 1
 
         if u == A
             v = u
-            d = 0
+            c = 0
             path::Vector{Tuple{Int64,Int64}} = []
-            while predecessor[v] != ((-1,-1),-1)
-                push!(path,base1to0(predecessor[v][1]))
-                v = predecessor[v][1]
-                d += 1
+            while predecessor[v] != (-1,-1)
+                push!(path,base1to0(predecessor[v]))
+                c += poidsCase[map[v[2]][v[1]]]
+                v = predecessor[v]
             end
-            display(d,states,path,base1to0(A))
+            display(c,states,path,base1to0(A))
             return "Il existe un chemin de D -> A"
 
         else
             S = successor(u,map)
             for s in S
-                cost = s[2] + predecessor[u][2]   
-                if !(haskey(predecessor,s[1])) && (!(haskey(L,s[1])) || L[s[1]] > cost)
-                    L[s[1]] = cost  
-                    predecessor[s[1]] = (u,cost)
+                lenght = lenghtToA(s[1],A)
+                if !(haskey(predecessor,s[1])) && (!(haskey(FilePrio,s[1])) || FilePrio[s[1]] > lenght)
+                    FilePrio[s[1]] = lenght
+                    predecessor[s[1]] = u
                 end
             end
         end   
@@ -175,5 +232,49 @@ function Dijkstra(fname::String, D::Tuple{Int64, Int64}, A::Tuple{Int64, Int64})
     return "Il n'existe pas de chemin de D -> A" 
 end
 
-println(algoBFS("PathFinding/dat/dao-map/arena.map",(14,18),(22,18)),"\n")
-println(Dijkstra("PathFinding/dat/wc3maps512-map/battleground.map",(54,432),(57,424)),"\n")
+function algoAstar(fname::String, D::Tuple{Int64, Int64}, A::Tuple{Int64, Int64})
+
+    # conversion en base (1,1) -> c'est-à-dire que la coordonnée du point en haut à gauche est (1,1) 
+    D = base0to1(D) 
+    A = base0to1(A) 
+    
+    map = verificationInput(fname, D, A) 
+    
+    # Début du parcours
+    
+    L = PriorityQueue()                             # intialisation d'une file de priorité en fonction du poids pour au point 
+    predecessor = Dict(D=>((-1,-1),-1))             # initialisation d'un dictionnaire avec le point de départ provenant d'un point et d'un chemin non définie 
+    enqueue!(L, D, lenghtToA(D,A))                               # enfile le départ avec un poids de 0 
+    states = 0                                      # nombre d'états parcourus 
+    while !(isempty(L)) 
+        u = dequeue!(L) 
+        states += 1 
+        
+        if u == A 
+            v = u 
+            c = 0 
+            path::Vector{Tuple{Int64,Int64}} = [] 
+            while predecessor[v] != ((-1,-1),-1) 
+                push!(path,base1to0(predecessor[v][1])) 
+                c += poidsCase[map[v[2]][v[1]]] 
+                v = predecessor[v][1] 
+            end
+            display(c,states,path,base1to0(A)) 
+            return "Il existe un chemin de D -> A" 
+        else S = successor(u,map) 
+            for s in S 
+                cost = s[2] + predecessor[u][2] + lenghtToA(s[1],A)
+                if !(haskey(predecessor,s[1])) && (!(haskey(L,s[1])) || L[s[1]] > cost) 
+                    L[s[1]] = cost 
+                    predecessor[s[1]] = (u,s[2] + predecessor[u][2])
+                end
+            end 
+        end
+    end
+    return "Il n'existe pas de chemin de D -> A" 
+end
+
+# println(algoBFS("PathFinding/dat/dao-map/arena.map",(14,18),(22,18)),"\n")
+println(algoDijkstra("PathFinding/dat/dao-map/lak100c.map",(172,462),(201,446)),"\n")
+# println(algoGlouton("PathFinding/dat/dao-map/lak100c.map",(172,462),(201,446)),"\n")
+println(algoAstar("PathFinding/dat/dao-map/lak100c.map",(172,462),(201,446)),"\n")

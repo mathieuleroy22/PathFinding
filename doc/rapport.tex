@@ -1,0 +1,227 @@
+\documentclass[a4paper,12pt]{article}
+
+% Packages utiles
+\usepackage{natbib}         % Pour les références
+\usepackage[T1]{fontenc}    % Utilisation de l'encodage T1 (important pour le français)
+\usepackage[french]{babel}  % Langue française
+\usepackage{graphicx}       % Pour insérer des images
+\usepackage{geometry}       % Pour régler les marges
+\geometry{margin=2cm}       % Marges de la page
+\usepackage{fancyhdr}
+\usepackage{hyperref}
+
+\pagestyle{fancy}
+\fancyhf{}  % Nettoie les anciens en-têtes/pieds
+
+% Crée un en-tête personnalisé
+\fancyhead[L]{%
+  \begin{minipage}[c]{0.75\textwidth}
+    \raggedright
+    \textbf{Path Finding}
+  \end{minipage}%
+}
+\fancyhead[R]{%
+  \begin{minipage}[c]{0.2\textwidth}
+    \raggedleft
+    \includegraphics[width=2cm]{nantesUniv.png}
+  \end{minipage}%
+}
+
+
+
+\fancyfoot[C]{\thepage}  % Numéro de page centré en bas
+
+% Supprimer l'en-tête de la première page
+\thispagestyle{empty}
+
+\setlength{\headsep}{2cm}     % Espace entre l'en-tête et le texte
+
+% Espaces pour le numéro en bas de page
+\setlength{\footskip}{30pt}  % Ajuste à la hauteur souhaitée
+\setlength{\textheight}{25cm}     % Réduit la hauteur du corps du texte
+
+\begin{document}
+
+% Page de titre
+\begin{titlepage}
+
+    \hfill\includegraphics[width=5cm]{nantesUniv.png}\\[5cm]
+    \centering
+    {\LARGE \textbf{Path Finding}}\\[1cm]
+    {\Large L3 CMI OPTIM}\\[2cm]
+    \textbf{Auteur :} LEROY Mathieu \\[0.5cm]
+    \textbf{Université de Nantes}\\[0.5cm]
+    \textbf{Date :} \today
+    \vfill
+\end{titlepage}
+
+% Introduction
+\newpage
+
+\begin{center}
+\huge\section*{Introduction}
+\end{center}
+
+Ce document a pour objectif de présenter et d'expliquer les différents choix réalisés lors de l'implémentation des algorithmes de recherche de plus court chemin (*path finding*).
+
+Le problème étudié consiste à déterminer le plus court chemin entre un point de départ et un point d'arrivée au sein d'un environnement représenté sous forme de carte. Cette carte est fournie à partir d'un fichier \texttt{map}, contenant les informations nécessaires à la reconstruction de l'espace de navigation (dimensions, cellules accessibles, obstacles, etc.).
+
+Plusieurs algorithmes de recherche de chemin ont été implémentés afin de comparer leurs comportements et leurs performances. L'objectif de ce travail est de proposer des implémentations aussi efficaces que possible, tant en termes de temps d'exécution que d'utilisation de la mémoire.
+\newline
+
+Ce projet prend place dans une formation où le développement logiciel est nécessaire bien que n'étant pas nécessairement la finalité du métier. 
+
+Il faut rapidement se familiariser avec un langage de calcul scientifique permettant d'effectuer des tâches mathématiques poussées. Ainsi, c'est le langage julia qui est choisit durant cet enseignement.
+\newline
+
+Les sections suivantes décrivent la modélisation du problème, les structures de données utilisées ainsi que les différents algorithmes implémentés.
+
+% Algorithmes
+\newpage
+
+\begin{center}
+\huge\section*{Algorithmes}
+\end{center}
+
+\subsection{Commencement}
+
+Avant d'expliquer en détails les différents algorithmes, il faut comprendre le contexte et le cadre du projet.
+\newline
+
+Tout d'abord, il faut comprendre l'utilisation des fichiers map provenant du site : \url{https://movingai.com/benchmarks/grids.html}
+\newline
+
+Ces fichiers sont des cartes provenant de :
+\begin{itemize}
+  \item Références de jeux commerciaux
+  \item Benchmarks du monde réel
+  \item Références artificielles
+\end{itemize}
+Par exemple, les données dans le dossier dat/ proviennent tous de jeux commerciaux mais il est possible d'utiliser d'autres données du site pour tester les algorithmes.
+En effet, tous les fichiers reprennent la même structure. Les 5 premières lignes donnent des informations sur le type de carte du fichier :
+\begin{itemize}
+  \item[] type octile
+  \item[] height y
+  \item[] width x
+  \item[] map
+\end{itemize}
+Puis, les lignes suivantes représentent un ensemble de symboles représentant la carte. C'est pourquoi, la fonction importFile collecte seulement les lignes 6 à la fin du fichier.
+\newline
+
+De plus, le symbole 'S' comme swamp représente un poids de 5 dans cette implémentation tandis que '.' et 'G' ont un poids de 1. Il est donc choisi dans cette implémentation de prendre un dictionnaire symbole -> valeur pour facilement retrouver le poids de chaque symbole disponible.
+\newline
+
+Enfin, avant de partir dans la compréhension précise des différents algorithmes, il faut comprendre la signification des bases (0,0) et (1,1). En effet, on retrouve 2 fonctions :
+\begin{itemize}
+  \item[] base0to1
+  \item[] base1to0
+\end{itemize}
+Et respectivement, elles ajoutent et retire 1 aux coordonnées d'un point. Pour comprendre ce besoin, il faut savoir que pour l'utilisateur, le point en haut à gauhce de la carte est le point (0,0) tandis que dans le tableau de symboles, c'est le point (1,1). Il faut donc modifier les points passés en entrée pour les convertir dans la base (1,1) et ainsi plus facilement traiter le parcours choisi. Puis lors de l'affichage, il suffit de faire la conversion dans le sens inverse pour se place dans la base (0,0).
+
+
+\subsection{Algorithme BFS (Breadth First Search)}
+
+L'algorithme BFS (\textit{Breadth First Search}, ou parcours en largeur) permet d'explorer un graphe niveau par niveau à partir d'un sommet de départ. Il garantit de trouver le chemin comportant le plus petit nombre d'arêtes lorsque tous les déplacements ont le même coût.
+
+Comme pour les autres algorithmes, les coordonnées du point de départ $D$ et du point d'arrivée $A$ sont d'abord converties dans la base $(1,1)$ afin de correspondre à l'indexation utilisée dans Julia. Une fonction de vérification est ensuite appelée pour s'assurer que les entrées sont valides et que la carte peut être correctement chargée.
+
+L'algorithme utilise une structure de type file (\textit{queue}) afin de gérer les sommets à explorer. Le premier sommet inséré est le point de départ $D$. À chaque itération, le sommet en tête de file est retiré puis ses successeurs sont explorés.
+
+Un dictionnaire \texttt{predecessor} est utilisé afin de mémoriser pour chaque sommet visité le sommet depuis lequel il a été atteint. Cette structure permet d'éviter de revisiter plusieurs fois le même sommet et permet également de reconstruire le chemin une fois l'objectif atteint.
+
+Pour chaque sommet extrait de la file :
+\begin{itemize}
+\item ses successeurs sont calculés à l'aide de la fonction \texttt{successor},
+\item si un successeur n'a pas encore été visité, il est ajouté à la file,
+\item son prédécesseur est enregistré dans le dictionnaire.
+\end{itemize}
+
+Lorsque le sommet d'arrivée $A$ est atteint, le chemin est reconstruit en remontant les prédécesseurs depuis $A$ jusqu'au point de départ $D$. Le programme calcule également le poids total du chemin en additionnant les poids des cases traversées.
+
+Enfin, l'algorithme affiche :
+\begin{itemize}
+\item le poids total du chemin trouvé,
+\item le nombre d'états explorés,
+\item la liste des positions constituant le chemin.
+\end{itemize}
+
+Cet algorithme est simple à implémenter et efficace pour des graphes non pondérés. Cependant, contrairement à Dijkstra ou A*, il ne prend pas en compte les poids des déplacements lors de l'exploration et ne garantit donc pas de trouver le chemin de coût minimal lorsque les poids des cases diffèrent.
+
+
+\subsection{Algorithme de Dijkstra}
+
+L’algorithme de Dijkstra permet de déterminer le plus court chemin entre un point de départ $D$ et un point d’arrivée $A$ dans un graphe pondéré dont les poids sont positifs.
+
+Dans notre implémentation, les coordonnées fournies en entrée sont tout d’abord converties dans une base $(1,1)$ afin de correspondre à l’indexation utilisée dans Julia. Une vérification des entrées est ensuite réalisée afin de s’assurer que la carte et les positions données sont valides.
+
+L’algorithme repose sur l’utilisation d’une \textit{file de priorité} contenant les sommets à explorer. Cette file est ordonnée selon le coût du chemin permettant d’atteindre chaque sommet depuis le point de départ. Le sommet de coût minimal est extrait à chaque itération.
+
+Un dictionnaire \texttt{predecessor} est utilisé afin de mémoriser pour chaque sommet :
+\begin{itemize}
+\item son prédécesseur dans le chemin courant,
+\item le coût total pour atteindre ce sommet depuis $D$.
+\end{itemize}
+
+À chaque étape, les successeurs du sommet courant sont générés. Si un nouveau chemin vers un successeur possède un coût plus faible que celui connu précédemment, la file de priorité ainsi que le dictionnaire des prédécesseurs sont mis à jour.
+
+Lorsque le sommet $A$ est atteint, le chemin est reconstruit en remontant la chaîne des prédécesseurs depuis $A$ jusqu’à $D$. Le poids total du chemin ainsi que le nombre d’états explorés sont alors affichés.
+
+Cet algorithme garantit l’obtention du plus court chemin lorsque tous les poids sont positifs.
+
+
+\subsection{Algorithme glouton}
+
+L’algorithme glouton repose sur une stratégie différente : il sélectionne à chaque étape le sommet qui semble être le plus proche de l’objectif selon une heuristique.
+
+Comme pour les autres algorithmes, les coordonnées sont d’abord converties dans la base utilisée par la carte et les entrées sont vérifiées. Une file de priorité est ensuite utilisée pour stocker les sommets à explorer.
+
+Dans ce cas, la priorité associée à chaque sommet correspond uniquement à la distance estimée entre ce sommet et l’arrivée $A$. Cette distance est calculée par la fonction \texttt{lenghtToA}. L’algorithme privilégie donc les sommets qui semblent se rapprocher le plus rapidement de la cible.
+
+Un dictionnaire \texttt{predecessor} est utilisé afin de mémoriser le prédécesseur de chaque sommet visité, ce qui permet de reconstruire le chemin une fois l’objectif atteint.
+
+Contrairement à l’algorithme de Dijkstra, cet algorithme ne tient pas compte du coût réel du chemin déjà parcouru. Il peut donc être plus rapide dans certains cas, mais ne garantit pas de trouver le plus court chemin.
+
+
+\subsection{Algorithme A*}
+
+L’algorithme A* combine les avantages de l’algorithme de Dijkstra et de l’approche gloutonne. Il utilise à la fois :
+\begin{itemize}
+\item le coût réel du chemin parcouru depuis le départ,
+\item une estimation heuristique de la distance restante jusqu’à l’objectif.
+\end{itemize}
+
+Dans l’implémentation réalisée, chaque sommet possède une priorité définie par la somme :
+\[
+f(n) = g(n) + h(n)
+\]
+
+où :
+\begin{itemize}
+\item $g(n)$ représente le coût réel pour atteindre le sommet $n$ depuis le départ,
+\item $h(n)$ correspond à l’heuristique estimant la distance entre $n$ et l’arrivée.
+\end{itemize}
+
+Comme précédemment, une file de priorité permet de sélectionner le sommet ayant la plus petite valeur de $f(n)$. Le dictionnaire \texttt{predecessor} mémorise à la fois le prédécesseur et le coût réel $g(n)$ pour atteindre chaque sommet.
+
+À chaque itération, les successeurs du sommet courant sont évalués. Si un chemin plus avantageux est trouvé, la file de priorité ainsi que les informations de prédécesseur sont mises à jour.
+
+Lorsque le sommet d’arrivée est atteint, le chemin est reconstruit en remontant les prédécesseurs, de la même manière que dans l’algorithme de Dijkstra.
+
+Grâce à l’utilisation de l’heuristique, l’algorithme A* explore généralement beaucoup moins d’états tout en garantissant l’optimalité du chemin si l’heuristique utilisée est admissible.
+
+\subsection{Reconstruction du chemin et affichage des résultats}
+
+Dans les trois algorithmes, une procédure similaire est utilisée pour reconstruire le chemin trouvé. Une fois le sommet d’arrivée atteint, le chemin est reconstruit en remontant successivement les prédécesseurs jusqu’au sommet de départ.
+
+Les coordonnées sont ensuite reconverties dans la base $(0,0)$ afin de correspondre au format d’affichage attendu. Le programme affiche alors :
+\begin{itemize}
+\item le poids total du chemin trouvé,
+\item le nombre d’états explorés pendant la recherche,
+\item la liste des positions constituant le chemin.
+\end{itemize}
+
+Cette étape permet de comparer les performances des différents algorithmes en termes de coût du chemin et de nombre d’états visités.
+
+
+
+\end{document}

@@ -1,7 +1,5 @@
 using DataStructures
 
-# TODO nom anglais
-
 #= Dictionnaire associant à chaque caractere son poids
 la valeur -1 est donnée pour les caracteres infranchissables =#
 pointWeight = Dict(   '.' => 1,

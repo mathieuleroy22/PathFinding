@@ -1,0 +1,6 @@
+// Intance 1 sur la carte version 1
+version1.map
+
+// chaque ligne correspond à un AMR avec son temps de départ, son point de départ et son point d'arrivée
+t=0 dock=(1,4) destination=(11,4)
+t=3 dock=(11,9) destination(1,14)

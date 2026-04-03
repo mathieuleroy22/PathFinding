@@ -1,23 +1,8 @@
 using DataStructures
 
-#= Dictionnaire associant à chaque caractere son poids
-la valeur -1 est donnée pour les caracteres infranchissables =#
-pointWeight = Dict(   '.' => 1,
-                    'G' => 1,
-                    'S' => 5,
-                    'W' => 8,
-                    '@' => -1,
-                    '0' => -1,
-                    'T' => -1
-                )
-
-#=
-Fonction retournant un tableau de lignes constituant la carte
-fname | type : String | exemple : "didactic.map"
-=#
-function importFile(fname::String)
-    return [collect(line) for line in (readlines(fname))[5:end]]    # les 5 premières lignes ne sont pas des éléments de la carte
-end
+# importation des différentes structures
+include("pointWeight.jl")
+include("openFile.jl")
 
 #=
 Fonction booléenne retournant vrai si P est bien un point sur la carte
@@ -26,7 +11,7 @@ height | type : Int64 | exemple : 49
 width | type : Int64 | exemple : 49
 =#
 function isInMap(P::Tuple{Int64, Int64}, height::Int64, width::Int64)
-    return 0 <= P[1] <= width && 0 <= P[2] <= height 
+    return 1 <= P[1] <= width && 1 <= P[2] <= height 
 end
 
 #= 
@@ -41,7 +26,7 @@ function verificationInput(fname::String, D::Tuple{Int64, Int64}, A::Tuple{Int64
     # TODO vérifier si le fname est bien un fichier
 
     # importe la carte et en déduit ses dimensions
-    map = importFile(fname)
+    map = openMap(fname)
     height::Int64 = size(map)[1]
     width::Int64 = size(map[1])[1]
 
@@ -65,9 +50,11 @@ width | type : Int64 | exemple : 49
 function successor(P::Tuple{Int64, Int64}, map)
     succ::Vector{Tuple{Tuple{Int64,Int64},Int64}} = []
     for elem in [(P[1]-1,P[2]), (P[1]+1,P[2]), (P[1],P[2]+1), (P[1],P[2]-1)]           
-        p = pointWeight[map[elem[2]][elem[1]]]
-        if isInMap(elem,size(map)[1],size(map[1])[1]) && p != -1     
-            push!(succ,(elem,p))
+        if isInMap(elem,size(map)[1],size(map[1])[1])
+            p = pointWeight[map[elem[2]][elem[1]]] 
+            if p != -1
+                push!(succ,(elem,p))
+            end
         end
     end
     return succ
@@ -80,8 +67,8 @@ nbStates | type : Int64 | exemple : 10
 path | type : Vector{Tuple{Int64,Int64}} | exemple : [(12,13),(12,12)]
 A | type : Tuple{Int64, Int64} | exemple : (12,14)
 =#
-function display(weightPath::Int64, nbStates::Int64, path::Vector{Tuple{Int64,Int64}}, A::Tuple{Int64, Int64})
-    println("Distance D -> A : ", weightPath)
+function display(lengthPath::Int64, nbStates::Int64, path::Vector{Tuple{Int64,Int64}}, A::Tuple{Int64, Int64})
+    println("Distance D -> A : ", lengthPath)
     println("Number of nbStates evaluated : ", nbStates)
     print("Path D → A : ")
     l = length(path)
@@ -147,14 +134,14 @@ function algoBFS(fname::String, D::Tuple{Int64, Int64}, A::Tuple{Int64, Int64})
         if u == A
 
             v = u
-            weightPath = 0
+            lengthPath = 0
             path::Vector{Tuple{Int64,Int64}} = [A]
             while predecessor[v] != (-1,-1)                         # le chemin s'arrête lorsque l'on retrouve D (son prédécesseur étant (-1,-1) par définition)
                 push!(path,base1to0(predecessor[v]))                # conversion en base (0,0) pour l'affichage
-                weightPath += pointWeight[map[v[2]][v[1]]]       
+                lengthPath += 1       
                 v = predecessor[v]
             end
-            display(weightPath,nbStates,path,base1to0(A))             # conversion en base (0,0) pour l'affichage
+            display(lengthPath,nbStates,path,base1to0(A))             # conversion en base (0,0) pour l'affichage
             return "Il existe un chemin de D -> A"
 
         else
@@ -186,40 +173,51 @@ function algoDijkstra(fname::String, D::Tuple{Int64, Int64}, A::Tuple{Int64, Int
     map = verificationInput(fname, D, A) 
     
     # Début du parcours
+    permanent = Vector{Tuple{Int64,Int64}}()                        # initialisation d'un tableau contenat les points permanents
+    FilePrio = PriorityQueue()                                      # intialisation d'une file de priorité en fonction du poids de chemin pour y parvenir depuis D
+    predecessor = Dict(D=>(-1,-1))                                  # initialisation d'un dictionnaire avec le point de départ provenant d'un point non défini
+    distance = Dict(D=>0)                                           # initialisation d'un dictionnaire avec le point de départ à une distance de 0 de D
     
-    FilePrio = PriorityQueue()                             # intialisation d'une file de priorité en fonction du poids de chemin pour y parvenir depuis D
-    predecessor = Dict(D=>((-1,-1),0))              # initialisation d'un dictionnaire avec le point de départ provenant d'un point non définie et d'un poids de 0 entre D et D 
     FilePrio[D] = 0                               
     nbStates = 0                                    # nombre de points visité lors du parcours
 
     while !(isempty(FilePrio))
 
-        u = dequeue!(FilePrio) 
-        nbStates += 1 
+        u = dequeue!(FilePrio)
+
+        if !(u in permanent)
+
+            push!(permanent,u)
+            nbStates += 1
         
-        if u == A
+            if u == A
 
-            v = u
-            weightPath = 0
-            path::Vector{Tuple{Int64,Int64}} = [A]
-            while predecessor[v] != ((-1,-1),0)                         # le chemin s'arrête lorsque l'on retrouve D (son prédécesseur étant (-1,-1) par définition)
-                push!(path,base1to0(predecessor[v][1]))                # conversion en base (0,0) pour l'affichage
-                weightPath += pointWeight[map[v[2]][v[1]]]       
-                v = predecessor[v][1]
-            end
-            display(weightPath,nbStates,path,base1to0(A))             # conversion en base (0,0) pour l'affichage
-            return "Il existe un chemin de D -> A" 
-
-        else 
-            Succ = successor(u,map) 
-            for succ in Succ
-                cost = succ[2] + predecessor[u][2]                                                                  # coût de succ devient son poids + le poids du chemin pour arriver à u
-                if !(haskey(predecessor,succ[1])) && (!(haskey(FilePrio,succ[1])) || FilePrio[succ[1]] > cost)      # si succ n'a pas déjà un chemin (plus court) pour y arriver dans predecessor et si il n'est pas dans la file de priorité ou alors que sa priorité est plus grande que celle calculée
-                    FilePrio[succ[1]] = cost                                                                        
-                    predecessor[succ[1]] = (u,cost) 
+                v = u
+                lengthPath = 0
+                path::Vector{Tuple{Int64,Int64}} = []
+                while predecessor[v] != (-1,-1)                        # le chemin s'arrête lorsque l'on retrouve D (son prédécesseur étant (-1,-1) par définition)
+                    push!(path,base1to0(predecessor[v]))                # conversion en base (0,0) pour l'affichage
+                    lengthPath += 1      
+                    v = predecessor[v]
                 end
-            end 
-        end
+                display(lengthPath,nbStates,path,base1to0(A))             # conversion en base (0,0) pour l'affichage
+                return "Il existe un chemin de D -> A" 
+            end
+
+            # Exploration des voisins
+            for (neighbor, weight_bow) in successor(u, map)                                      
+                if !(neighbor in permanent)
+                    new_cost = distance[u] + weight_bow
+                
+                    # Si on trouve un chemin plus court vers ce voisin
+                    if new_cost < get(distance, neighbor, typemax(Int64))
+                        distance[neighbor] = new_cost
+                        predecessor[neighbor] = u
+                        FilePrio[neighbor] = new_cost # Met à jour ou ajoute
+                    end
+                end
+            end
+        end 
     end
     return "Il n'existe pas de chemin de D -> A" 
 end
@@ -243,31 +241,31 @@ function algoGlouton(fname::String, D::Tuple{Int64, Int64}, A::Tuple{Int64, Int6
     FilePrio = PriorityQueue()                                          # intialisation d'une file de priorité en fonction du poids pour au point
     predecessor = Dict(D=>((-1,-1)))                                    # initialisation d'un dictionnaire avec le point de départ provenant d'un point non défini   
     FilePrio[D] = lenghtToA(D,A)                                        # enfile le départ avec sa distance par rapport à l'arrivée
-    nbStates = 0                                                        # nombre de points visité lors du parcours
+    nbStates = 1                                                        # nombre de points visité lors du parcours
 
     while !(isempty(FilePrio))
 
         u = dequeue!(FilePrio)
-        nbStates += 1
 
         if u == A
 
             v = u
-            weightPath = 0
+            lengthPath = 0
             path::Vector{Tuple{Int64,Int64}} = [A]
             while predecessor[v] != (-1,-1)                               # le chemin s'arrête lorsque l'on retrouve D (son prédécesseur étant (-1,-1) par définition)
                 push!(path,base1to0(predecessor[v]))                   # conversion en base (0,0) pour l'affichage
-                weightPath += pointWeight[map[v[2]][v[1]]]       
+                lengthPath += 1       
                 v = predecessor[v]
             end
-            display(weightPath,nbStates,path,base1to0(A))             # conversion en base (0,0) pour l'affichage
+            display(lengthPath,nbStates,path,base1to0(A))             # conversion en base (0,0) pour l'affichage
             return "Il existe un chemin de D -> A"
 
         else
             Succ = successor(u,map)
             for succ in Succ
-                lenght = lenghtToA(succ[1],A)
                 if !(haskey(predecessor,succ[1]))                           # si le successeur n'a pas déjà été vu
+                    nbStates += 1
+                    lenght = lenghtToA(succ[1],A)
                     FilePrio[succ[1]] = lenght
                     predecessor[succ[1]] = u
                 end
@@ -284,7 +282,7 @@ fname | type : String | exemple : "didactic.map"
 • A | type : Tuple{Int64, Int64} | exemple : (4, 5)"
 =#
 function algoAstar(fname::String, D::Tuple{Int64, Int64}, A::Tuple{Int64, Int64})
-
+    
     # conversion en base (1,1) -> c'est-à-dire que la coordonnée du point en haut à gauche est (1,1) 
     D = base0to1(D) 
     A = base0to1(A) 
@@ -293,45 +291,57 @@ function algoAstar(fname::String, D::Tuple{Int64, Int64}, A::Tuple{Int64, Int64}
     map = verificationInput(fname, D, A) 
     
     # Début du parcours
-    FilePrio = PriorityQueue()                                             # intialisation d'une file de priorité en fonction du poids pour au point 
-    predecessor = Dict(D=>((-1,-1),0))                             # initialisation d'un dictionnaire avec le point de départ provenant d'un point non définie et d'un poids de 0 entre D et D
-    FilePrio[D] = lenghtToA(D,A) + 0                                 
-    nbStates = 0                                                    # nombre d'états parcourus
+    permanent = Vector{Tuple{Int64,Int64}}()                        # initialisation d'un tableau contenat les points permanents
+    FilePrio = PriorityQueue()                                      # intialisation d'une file de priorité en fonction du poids de chemin pour y parvenir depuis D
+    predecessor = Dict(D=>(-1,-1))                                  # initialisation d'un dictionnaire avec le point de départ provenant d'un point non défini
+    distance = Dict(D=>0)                                           # initialisation d'un dictionnaire avec le point de départ à une distance de 0 de D
+    
+    FilePrio[D] = 0                               
+    nbStates = 0                                    # nombre de points visité lors du parcours
 
     while !(isempty(FilePrio))
 
-        u = dequeue!(FilePrio) 
-        nbStates += 1 
+        u = dequeue!(FilePrio)
+
+        if !(u in permanent)
+
+            push!(permanent,u)
+            nbStates += 1
         
-        if u == A
+            if u == A
 
-            v = u
-            weightPath = 0
-            path::Vector{Tuple{Int64,Int64}} = [A]
-            while predecessor[v] != ((-1,-1),0)                         # le chemin s'arrête lorsque l'on retrouve D (son prédécesseur étant (-1,-1) par définition)
-                push!(path,base1to0(predecessor[v][1]))                # conversion en base (0,0) pour l'affichage
-                weightPath += pointWeight[map[v[2]][v[1]]]       
-                v = predecessor[v][1]
-            end
-            display(weightPath,nbStates,path,base1to0(A))             # conversion en base (0,0) pour l'affichage
-            return "Il existe un chemin de D -> A"
-
-        else 
-            Succ = successor(u,map) 
-            for succ in Succ
-                cost = succ[2] + predecessor[u][2]
-                prio = cost + lenghtToA(succ[1],A)                           # 
-                if !(haskey(predecessor,succ[1])) && (!(haskey(FilePrio,succ[1])) || FilePrio[succ[1]] > prio) 
-                    FilePrio[succ[1]] = prio 
-                    predecessor[succ[1]] = (u,cost)
+                v = u
+                lengthPath = 0
+                path::Vector{Tuple{Int64,Int64}} = []
+                while predecessor[v] != (-1,-1)                        # le chemin s'arrête lorsque l'on retrouve D (son prédécesseur étant (-1,-1) par définition)
+                    push!(path,base1to0(predecessor[v]))                # conversion en base (0,0) pour l'affichage
+                    lengthPath += 1      
+                    v = predecessor[v]
                 end
-            end 
-        end
+                display(lengthPath,nbStates,path,base1to0(A))             # conversion en base (0,0) pour l'affichage
+                return "Il existe un chemin de D -> A" 
+            end
+
+            # Exploration des voisins
+            for (neighbor, weight_bow) in successor(u, map)                                      
+                if !(neighbor in permanent)
+                    new_cost = distance[u] + weight_bow
+                    new_prio = new_cost + lenghtToA(neighbor,A) 
+                
+                    # Si on trouve un chemin plus court vers ce voisin
+                    if new_cost < get(distance, neighbor, typemax(Int64))
+                        distance[neighbor] = new_cost
+                        predecessor[neighbor] = u
+                        FilePrio[neighbor] = new_prio # Met à jour ou ajoute
+                    end
+                end
+            end
+        end 
     end
     return "Il n'existe pas de chemin de D -> A" 
 end
 
-println(algoBFS("PathFinding/dat/dao-map/lak100c.map",(172,462),(201,446)),"\n")
-println(algoDijkstra("PathFinding/dat/dao-map/lak100c.map",(172,462),(201,446)),"\n")
-println(algoGlouton("PathFinding/dat/dao-map/lak100c.map",(172,462),(201,446)),"\n")
-println(algoAstar("PathFinding/dat/dao-map/lak100c.map",(172,462),(201,446)),"\n")
+#println(algoBFS("PathFinding/dat/wc3maps512-map/theglaive.map",(193, 189),(437, 226)),"\n")
+#println(algoDijkstra("PathFinding/dat/wc3maps512-map/theglaive.map",(193, 189),(437, 226)),"\n")
+#println(algoGlouton("PathFinding/dat/wc3maps512-map/theglaive.map",(193, 189),(437, 226)),"\n")
+#println(algoAstar("PathFinding/dat/wc3maps512-map/theglaive.map",(193, 189),(437, 226)),"\n")

@@ -64,11 +64,14 @@ mutable struct AMR
 
 end
 
-# TODO faire un struct solution pour stocker facilement les chemins parcourus
-
 # -----------------------------------------------------------------------------
 # data structure décrivant une solution optimale du problème
 
-struct Solution
+mutable struct Solution
+
+    id::Int64                               # id définissant l'AMR
+
+    road::Vector{Tuple{Int64,Int64}}        # chemin parcouru par l'AMR
+    departuretime::Int64                    # temps auquel l'AMR a commencé sa tâche
 
 end

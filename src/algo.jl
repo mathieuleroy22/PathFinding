@@ -3,6 +3,7 @@ using DataStructures
 # importation des différentes structures
 include("pointWeight.jl")
 include("openFile.jl")
+include("display.jl")
 
 #=
 Fonction booléenne retournant vrai si P est bien un point sur la carte
@@ -58,24 +59,6 @@ function successor(P::Tuple{Int64, Int64}, map)
         end
     end
     return succ
-end
-
-#=
-Fonction réalisant l'affichage du résultat
-weightPath | type : Int64 | exemple : 2
-nbStates | type : Int64 | exemple : 10
-path | type : Vector{Tuple{Int64,Int64}} | exemple : [(12,13),(12,12)]
-A | type : Tuple{Int64, Int64} | exemple : (12,14)
-=#
-function display(lengthPath::Int64, nbStates::Int64, path::Vector{Tuple{Int64,Int64}}, A::Tuple{Int64, Int64})
-    println("Distance D -> A : ", lengthPath)
-    println("Number of nbStates evaluated : ", nbStates)
-    print("Path D → A : ")
-    l = length(path)
-    for i in 1:l
-        print(path[l-i+1], " -> ")                   # le départ est le dernier élément de path      
-    end
-    println(A)
 end
 
 #=
@@ -141,7 +124,7 @@ function algoBFS(fname::String, D::Tuple{Int64, Int64}, A::Tuple{Int64, Int64})
                 lengthPath += 1       
                 v = predecessor[v]
             end
-            display(lengthPath,nbStates,path,base1to0(A))             # conversion en base (0,0) pour l'affichage
+            algoDisplay(lengthPath,nbStates,path,base1to0(A))             # conversion en base (0,0) pour l'affichage
             return "Il existe un chemin de D -> A"
 
         else
@@ -200,7 +183,7 @@ function algoDijkstra(fname::String, D::Tuple{Int64, Int64}, A::Tuple{Int64, Int
                     lengthPath += 1      
                     v = predecessor[v]
                 end
-                display(lengthPath,nbStates,path,base1to0(A))             # conversion en base (0,0) pour l'affichage
+                algoDisplay(lengthPath,nbStates,path,base1to0(A))             # conversion en base (0,0) pour l'affichage
                 return "Il existe un chemin de D -> A" 
             end
 
@@ -257,7 +240,7 @@ function algoGlouton(fname::String, D::Tuple{Int64, Int64}, A::Tuple{Int64, Int6
                 lengthPath += 1       
                 v = predecessor[v]
             end
-            display(lengthPath,nbStates,path,base1to0(A))             # conversion en base (0,0) pour l'affichage
+            algoDisplay(lengthPath,nbStates,path,base1to0(A))             # conversion en base (0,0) pour l'affichage
             return "Il existe un chemin de D -> A"
 
         else
@@ -318,7 +301,7 @@ function algoAstar(fname::String, D::Tuple{Int64, Int64}, A::Tuple{Int64, Int64}
                     lengthPath += 1      
                     v = predecessor[v]
                 end
-                display(lengthPath,nbStates,path,base1to0(A))             # conversion en base (0,0) pour l'affichage
+                algoDisplay(lengthPath,nbStates,path,base1to0(A))             # conversion en base (0,0) pour l'affichage
                 return "Il existe un chemin de D -> A" 
             end
 

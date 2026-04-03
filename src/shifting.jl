@@ -1,8 +1,9 @@
+using DataStructures
+
 # importations des différentes structures
 include("pointWeight.jl")
 include("datastructures.jl")
 include("openFile.jl")
-include("algo.jl")                  # TODO mettre les fonctions dans un autre fichier ???
 
 #=
 Fonction affichant le chemin entre D et A sur map en suivant l'algorthme Astar
@@ -41,10 +42,7 @@ function algoAstarAMR(map::Vector{Vector{Char}}, D::Tuple{Int64, Int64}, A::Tupl
             end
 
             # Exploration des voisins
-            for (neighbor, weight_bow) in successorAMR(u, map) 
-                if u == (11,3)
-                    println(neighbor)
-                end                                     
+            for (neighbor, weight_bow) in successorAMR(u, map)                                    
                 if !(neighbor in permanent)
                     new_cost = distance[u] + weight_bow
                     new_prio = new_cost + lenghtToA(neighbor,A) 
@@ -60,6 +58,15 @@ function algoAstarAMR(map::Vector{Vector{Char}}, D::Tuple{Int64, Int64}, A::Tupl
         end 
     end
     throw(error("Il n'y a pas de chemin entre "*string(D)*" et "*string(A)))
+end
+
+#=
+Fonction retournant la distance entre les points P et A
+P | type : Tuple{Int64, Int64} | exemple : (12, 14)
+A | type : Tuple{Int64, Int64} | exemple : (11, 13)
+=#
+function lenghtToA(P::Tuple{Int64, Int64}, A::Tuple{Int64,Int64})
+    return sqrt((P[2]-A[2])^2 + (P[1]-A[1])^2)
 end
 
 #=
@@ -90,10 +97,15 @@ Fonciton effectuant les mouvements de tous les amr sur la carte
 Retourne la liste des AMR modifiés
 map | Vector{Vector{Char}} | exemple : [[. . .][@ . @]]
 currentAmr | Vector{AMR} | exemple : TODO
+pathAMR | Vector{Solution} | exemple : TODO
 =#
-function movement(map::Vector{Vector{Char}},currentAmr::Vector{AMR})
+function movement(map::Vector{Vector{Char}},currentAmr::Vector{AMR},pathAmr::Vector{Solution})
     for amr in currentAmr
+
+        # avance de un point sur la map
         amr.point = popfirst!(amr.road)
+        push!(pathAmr[amr.id].road,amr.point)           # ajoute le déplacement dans la solution
+
         if amr.point == amr.destination
             # On trouve l'index de l'objet 'amr' dans la liste 'currentAmr'
             idx = findfirst(x -> x === amr, currentAmr)

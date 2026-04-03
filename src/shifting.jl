@@ -19,7 +19,7 @@ function algoAstarAMR(map::Vector{Vector{Char}}, D::Tuple{Int64, Int64}, A::Tupl
     predecessor = Dict(D=>(-1,-1))                                  # initialisation d'un dictionnaire avec le point de départ provenant d'un point non défini
     distance = Dict(D=>0)                                           # initialisation d'un dictionnaire avec le point de départ à une distance de 0 de D
     
-    FilePrio[D] = 0                               
+    FilePrio[D] = 0            
 
     while !(isempty(FilePrio))
 
@@ -32,16 +32,19 @@ function algoAstarAMR(map::Vector{Vector{Char}}, D::Tuple{Int64, Int64}, A::Tupl
             if u == A
 
                 v = u
-                path::Vector{Tuple{Int64,Int64}} = []
+                path::Vector{Tuple{Int64,Int64}} = [A]
                 while predecessor[v] != (-1,-1)                        # le chemin s'arrête lorsque l'on retrouve D (son prédécesseur étant (-1,-1) par définition)
-                    pushback!(path,predecessor[v])          
+                    pushfirst!(path,predecessor[v])          
                     v = predecessor[v]
                 end
                 return path
             end
 
             # Exploration des voisins
-            for (neighbor, weight_bow) in successor(u, map)                                      
+            for (neighbor, weight_bow) in successorAMR(u, map) 
+                if u == (11,3)
+                    println(neighbor)
+                end                                     
                 if !(neighbor in permanent)
                     new_cost = distance[u] + weight_bow
                     new_prio = new_cost + lenghtToA(neighbor,A) 
@@ -56,7 +59,30 @@ function algoAstarAMR(map::Vector{Vector{Char}}, D::Tuple{Int64, Int64}, A::Tupl
             end
         end 
     end
-    return []
+    throw(error("Il n'y a pas de chemin entre "*string(D)*" et "*string(A)))
+end
+
+#=
+Fonction retournant les successeurs possibles de P avec leur poids
+P | type : Tuple{Int64, Int64} | exemple : (12, 14)
+height | type : Int64 | exemple : 49
+width | type : Int64 | exemple : 49
+=#
+function successorAMR(P::Tuple{Int64, Int64}, map)
+
+    height::Int64 = size(map)[1]
+    width::Int64 = size(map[1])[1]
+    succ::Vector{Tuple{Tuple{Int64,Int64},Int64}} = []
+
+    for (x,y) in [(P[1]-1,P[2]), (P[1]+1,P[2]), (P[1],P[2]+1), (P[1],P[2]-1)]           
+        if (1 <= x <= height && 1 <= y <= width)
+            p = pointWeight[map[x][y]] 
+            if p != -1
+                push!(succ,((x,y),p))
+            end
+        end
+    end
+    return succ
 end
 
 #=
@@ -69,8 +95,14 @@ function movement(map::Vector{Vector{Char}},currentAmr::Vector{AMR})
     for amr in currentAmr
         amr.point = popfirst!(amr.road)
         if amr.point == amr.destination
-            currentAmr.pop(amr)
-            # TODO Ajouter l'amr a la solution
+            # On trouve l'index de l'objet 'amr' dans la liste 'currentAmr'
+            idx = findfirst(x -> x === amr, currentAmr)
+            
+            # Si on l'a trouvé, on le supprime
+            if idx !== nothing
+                deleteat!(currentAmr, idx)
+            end
+            # TODO ajouter l'AMR a la solution
         end
         # TODO vérifier qu'il peut aller sur la case
         # TODO vérifier si la case est la destination

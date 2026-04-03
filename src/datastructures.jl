@@ -53,7 +53,7 @@ end
 # -----------------------------------------------------------------------------
 # data structure décrivant un AMR convoyeur
 
-struct AMR
+mutable struct AMR
 
     id::Int64                               # id définissant l'AMR
 
@@ -61,7 +61,7 @@ struct AMR
     point::Tuple{Int64,Int64}               # point où il se situe
     destination::Tuple{Int64,Int64}         # destination de l'AMR
     road::Vector{Tuple{Int64,Int64}}        # chemin que l'AMR doit parcourir
-    
+
 end
 
 # TODO faire un struct solution pour stocker facilement les chemins parcourus

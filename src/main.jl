@@ -8,12 +8,12 @@ function main(fname::String)
     # importe l'instance dans fname
     instance::Instance = openInstance(fname)
 
-    currentAmr = Vector{AMR}[]
+    currentAmr = Vector{AMR}()
     time = 0
     id = 0                          # id définissant un AMR et sa priorité par rapport à un autre AMR
 
     while !(isempty(instance.departureTime))      # tant qu'il y a des AMR en attente
-        while instance.departureTime[1] == time
+        while !(isempty(instance.departureTime)) && instance.departureTime[1] == time
             timeAmr = popfirst!(instance.departureTime)
             dockAmr = popfirst!(instance.dock)
             destinationAmr = popfirst!(instance.destination)

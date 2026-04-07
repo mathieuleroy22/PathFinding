@@ -14,56 +14,55 @@ A | type : Tuple{Int64, Int64} | exemple : (2, 2)
 time | type : Int64 | exemple : 0
 Fonction astarAMR incluant la mise à jour automatique de la carte
 =#
-#=
-Fonction astarAMR modifiée pour considérer un point et un temps (Int64)
-=#
 function astarAMR(map::Dict{Tuple{Int64, Int64}, Case}, D::Tuple{Int64, Int64}, A::Tuple{Int64, Int64}, time::Int64) 
     
-    # 1. L'état initial doit être un tuple (Point, Temps)
-    startState = (D, time)
+    # 1. Initialisation de l'état (Position, ID_intervalle)
+    startIntervalID = getIntervalID(map[D], time)
+    startState = (D, startIntervalID)
     
-    # 2. Initialisation des structures avec le bon type de clé
-    permanent = Set{Tuple{Tuple{Int64, Int64}, Int64}}() 
-    FilePrio = PriorityQueue{Tuple{Tuple{Int64, Int64}, Int64}, Float64}()
-    predecessor = Dict{Tuple{Tuple{Int64, Int64}, Int64}, Tuple{Tuple{Int64, Int64}, Int64}}(startState => ((-1, -1), -1))
+    permanent = Set{Tuple{Tuple{Int64,Int64}, Int64}}()
+    FilePrio = PriorityQueue()
+    predecessor = Dict(startState => ((-1,-1), -1))
+    times = Dict(startState => time)
     
-    FilePrio[startState] = Float64(time + lenghtToA(D, A))
+    FilePrio[startState] = time + lenghtToA(D, A)            
 
     while !(isempty(FilePrio))
+
         current_state = dequeue!(FilePrio)
-        (point, t) = current_state 
+        point, current_inv_id = current_state
+        t = times[current_state]
 
         if !(current_state in permanent)
             push!(permanent, current_state)
         
             if point == A
-                # Reconstruction du chemin
-                path_with_times = []
+                # --- RECONSTRUCTION DU CHEMIN AVEC TEMPS ---
                 p = current_state
-                while predecessor[p] != ((-1, -1), -1)
-                    pushfirst!(path_with_times, p) 
+                path_with_times = []
+                while predecessor[p] != ((-1,-1), -1)
+                    pushfirst!(path_with_times, (p[1], times[p]))          
                     p = predecessor[p]
                 end
                 pushfirst!(path_with_times, (D, time))
-                
-                updateInterval(map, path_with_times)
-                return [p[1] for p in path_with_times]
+
+                updateInterval(map, path_with_times) # TODO ne pas bloquer D et A
+
+                # On retourne uniquement les coordonnées pour l'affichage
+                return path_with_times
             end
 
-            # Récupération de l'intervalle pour le point et le temps actuel
-            currentIntervalID = getIntervalID(map[point], t)
-            currentInterval = map[point].safeInterval[currentIntervalID]
+            # Récupération de l'intervalle de l'état actuel
+            currentInterval = map[point].safeInterval[current_inv_id]
 
-            # successorSIPP doit renvoyer ((Voisin, NouveauTemps), NouveauTemps)
-            for (neighbor_state, neighborTime) in successorSIPP(point, currentInterval, t, map)
-                if !((neighbor_state, neighborTime) in permanent)
-                    
-                    # Ajout du haskey pour ne pas écraser un chemin valide trouvé plus tôt
-                    if !haskey(predecessor, (neighbor_state, neighborTime))
-                        predecessor[(neighbor_state, neighborTime)] = current_state
-                        FilePrio[(neighbor_state, neighborTime)] = Float64(neighborTime + lenghtToA(neighbor_state, A))
+            # Exploration des successeurs SIPP
+            for (neighbor_state, neighborTime) in successorSIPP(point, currentInterval, t, map)                                    
+                if !(neighbor_state in permanent)
+                    if neighborTime < get(times, neighbor_state, typemax(Int64))
+                        times[neighbor_state] = neighborTime
+                        predecessor[neighbor_state] = current_state
+                        FilePrio[neighbor_state] = neighborTime + lenghtToA(neighbor_state[1], A) 
                     end
-                    
                 end
             end
         end 
@@ -91,51 +90,36 @@ map | type: Dict{Tuple{Int64, Int64}, Case} | exemple : ((5, 19) => Case(1, ...)
 #=
 Fonction retournant les successeurs SIPP avec protection anti-swap
 =#
-#=
-Fonction retournant les successeurs (Mouvements + Attente sur place)
-P | type : Tuple{Int64, Int64}
-currentInterval | type : SafeInterval
-time | type : Int64
-map | type: Dict{Tuple{Int64, Int64}, Case}
-=#
-#=
-Fonction retournant les successeurs accessibles à l'instant t+1 uniquement
-P | type : Tuple{Int64, Int64}
-currentInterval | type : SafeInterval 
-time | type : Int64
-map | type: Dict{Tuple{Int64, Int64}, Case}
-=#
 function successorSIPP(P::Tuple{Int64, Int64}, currentInterval::SafeInterval, time::Int64, map::Dict{Tuple{Int64, Int64}, Case})
-    # Le vecteur contient des Tuples de (Etat_complet, Temps) [cite: 16]
-    succ = Vector{Tuple{Tuple{Int64, Int64}, Int64}}()
+    succ::Vector{Tuple{Tuple{Tuple{Int64,Int64}, Int64}, Int64}} = []
 
-    # --- 1. ATTENTE SUR PLACE (P, t+1) ---
-    # On vérifie si t+1 est toujours dans l'intervalle de sécurité de la case actuelle [cite: 19, 25, 26]
-    next_time = time + map[P].weight
-    if next_time <= currentInterval.end_t
-        push!(succ, (P, next_time))
-    end
-
-   # --- 2. MOUVEMENTS VERS LES VOISINS (Voisin, t+1) ---
-    for neighbor in [(P[1]-1,P[2]), (P[1]+1,P[2]), (P[1],P[2]+1), (P[1],P[2]-1)]           
-        if haskey(map, neighbor)
-            n_case = map[neighbor]
-            next_time = time + n_case.weight
+    for point in [(P[1]-1,P[2]), (P[1]+1,P[2]), (P[1],P[2]+1), (P[1],P[2]-1)]           
+        if haskey(map, point)
+            n_case = map[point]
+            time_cost = n_case.weight
             
             for n_inv in n_case.safeInterval
-                if n_inv.start_t <= next_time <= n_inv.end_t
+                t_arrival = time + time_cost
+                
+                # 1. On vérifie si on peut arriver dans l'intervalle du voisin
+                if t_arrival <= n_inv.end_t
+                    actual_arrival::Int64 = max(t_arrival, n_inv.start_t)
+                    wait_time = actual_arrival - t_arrival
                     
-                    # --- SMART ANTI-SWAP ---
-                    # isInInterval renvoie 'false' si la case est bloquée par un autre AMR.
-                    # Si le voisin est bloqué à l'instant 'time' ET que ma case actuelle 
-                    # sera bloquée à l'instant 'next_time', c'est un croisement frontal !
-                    if !isInInterval(n_case, time) && !isInInterval(map[P], next_time)
-                        break # On rejette ce mouvement et on sort de la boucle n_inv
+                    # 2. On vérifie si on peut attendre sur la case actuelle (P)
+                    if time + wait_time <= currentInterval.end_t
+                        
+                        # --- PROTECTION ANTI-SWAP ---
+                        # On vérifie que notre case actuelle (P) est toujours LIBRE 
+                        # à l'instant précis où l'on arrive sur la case voisine.
+                        # Si quelqu'un d'autre a prévu d'arriver en P à 'actual_arrival',
+                        # alors faire ce mouvement causerait un swap.
+                        if isInInterval(map[P], actual_arrival)
+                            push!(succ, ((point, n_inv.id), actual_arrival))
+                        end
+                        # ----------------------------
+
                     end
-                    
-                    # Si ce n'est pas un swap, le mouvement est valide
-                    push!(succ, (neighbor, next_time))
-                    break 
                 end
             end
         end
@@ -187,7 +171,7 @@ function updateInterval(map, path_with_times)
         # Pour éviter les échanges de place, on bloque la case actuelle 
         # jusqu'à ce que l'AMR soit totalement arrivé sur la case suivante.
         if i < length(path_with_times)
-            t_out = path_with_times[i+1][2] - 1
+            t_out = path_with_times[i+1][2] 
         else
             t_out = typemax(Int64) # Destination finale bloquée
         end

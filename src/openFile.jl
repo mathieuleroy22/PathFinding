@@ -8,7 +8,29 @@ Fonction retournant un tableau de lignes constituant la carte
 fname | type : String | exemple : "didactic.map"
 =#
 function openMap(fname::String)
-    return [collect(line) for line in (readlines(fname))[5:end]]    # les 5 premières lignes ne sont pas des éléments de la carte
+
+    lines = readlines(fname)[5:end]                         # la carte commence à partir de la 5ème ligne
+    
+    dict_map = Dict{Tuple{Int64, Int64}, Case}()
+    
+    # dimensions pour la structure Instance
+    height = length(lines)
+    width = length(lines[1])
+    
+    img = Matrix{RGB{Float64}}(undef, height, width)
+
+    for (i, line) in enumerate(lines)
+        for (j, char) in enumerate(line)
+            weight = get!(pointWeight,char,nothing)
+            weight !== nothing || throw(error("Le symbole '$symbol' n'est pas reconnu."))
+            img[i, j] = get(colorMapping, char, RGB(0,0,0))
+            if weight != -1
+                dict_map[(i, j)] = Case(weight)
+            end
+        end
+    end
+
+    return img, dict_map, height, width
 end
 
 #=
@@ -18,18 +40,20 @@ fname | type : String | exemple : "didactic.map"
 function openInstance(fname::String)
 
     # TODO vérifier si le fname est bien défini
-    fullPath = joinpath(fname)
     
     departureTimes = Int64[]
     dock = Tuple{Int64, Int64}[]
     destinations = Tuple{Int64, Int64}[]
     local map
+    local displayMap
+    height = 0
+    width = 0
 
-    open(fullPath, "r") do file
+    open(fname, "r") do file
 
         readline(file)                                              # passe les commentaires
         mname = readline(file)
-        map = openMap("PathFinding/dat/robot-map/"*string(mname))
+        (displayMap, map, height, width) = openMap("PathFinding/dat/robot-map/"*string(mname))
         readline(file)                                              # passe les commentaires
 
         for line in eachline(file)
@@ -44,11 +68,12 @@ function openInstance(fname::String)
                 push!(dock, (nums[2], nums[3]))
                 push!(destinations, (nums[4], nums[5]))
             end
+            # TODO expliquer l'inversion des x y
         end
     end
 
     # Création de l'objet (le constructeur interne s'occupe du tri par temps)
-    return Instance(fname, dock, departureTimes, destinations, map)
+    return Instance(fname, dock, departureTimes, destinations, displayMap, map, height, width)
 end
 
-# println(openInstance("PathFinding/dat/robot-instance/version1-instance1.txt"))
+# println(openInstance("PathFinding/dat/robot-instance/version1-instance1.txt"))

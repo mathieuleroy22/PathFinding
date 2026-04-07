@@ -2,5 +2,5 @@
 version1.map
 
 // chaque ligne correspond à un AMR avec son temps de départ, son point de départ et son point d'arrivée
-t=0 dock=(1,4) destination=(11,4)
-t=3 dock=(11,9) destination(1,14)
+t=0 dock=(4,1) destination=(24,11)
+t=3 dock=(9,11) destination=(14,1)

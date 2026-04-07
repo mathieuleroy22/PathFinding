@@ -2,8 +2,32 @@ using DataStructures
 
 # importation des différentes structures
 include("pointWeight.jl")
-include("openFile.jl")
-include("display.jl")
+
+#=
+Fonction retournant un tableau de lignes constituant la carte
+fname | type : String | exemple : "didactic.map"
+=#
+function openMap(fname::String)
+    return [collect(line) for line in (readlines(fname))[5:end]]    # les 5 premières lignes ne sont pas des éléments de la carte
+end
+
+#=
+Fonction réalisant l'affichage du résultat
+weightPath | type : Int64 | exemple : 2
+nbStates | type : Int64 | exemple : 10
+path | type : Vector{Tuple{Int64,Int64}} | exemple : [(12,13),(12,12)]
+A | type : Tuple{Int64, Int64} | exemple : (12,14)
+=#
+function algoDisplay(lengthPath::Int64, nbStates::Int64, path::Vector{Tuple{Int64,Int64}}, A::Tuple{Int64, Int64})
+    println("Distance D -> A : ", lengthPath)
+    println("Number of nbStates evaluated : ", nbStates)
+    print("Path D → A : ")
+    l = length(path)
+    for i in 1:l
+        print(path[l-i+1], " -> ")                   # le départ est le dernier élément de path      
+    end
+    println(A)
+end
 
 #=
 Fonction booléenne retournant vrai si P est bien un point sur la carte
@@ -327,4 +351,4 @@ end
 #println(algoBFS("PathFinding/dat/wc3maps512-map/theglaive.map",(193, 189),(437, 226)),"\n")
 #println(algoDijkstra("PathFinding/dat/wc3maps512-map/theglaive.map",(193, 189),(437, 226)),"\n")
 #println(algoGlouton("PathFinding/dat/wc3maps512-map/theglaive.map",(193, 189),(437, 226)),"\n")
-#println(algoAstar("PathFinding/dat/wc3maps512-map/theglaive.map",(193, 189),(437, 226)),"\n")
+println(algoAstar("PathFinding/dat/wc3maps512-map/theglaive.map",(193, 189),(437, 226)),"\n")

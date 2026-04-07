@@ -1,49 +1,62 @@
-using Plots
+using GLMakie
+using Colors
+using LinearAlgebra # Pour transpose
 
-#=
-Fonction réalisant l'affichage du résultat
-weightPath | type : Int64 | exemple : 2
-nbStates | type : Int64 | exemple : 10
-path | type : Vector{Tuple{Int64,Int64}} | exemple : [(12,13),(12,12)]
-A | type : Tuple{Int64, Int64} | exemple : (12,14)
-=#
-function algoDisplay(lengthPath::Int64, nbStates::Int64, path::Vector{Tuple{Int64,Int64}}, A::Tuple{Int64, Int64})
-    println("Distance D -> A : ", lengthPath)
-    println("Number of nbStates evaluated : ", nbStates)
-    print("Path D → A : ")
-    l = length(path)
-    for i in 1:l
-        print(path[l-i+1], " -> ")                   # le départ est le dernier élément de path      
+function animate_amr_paths(base_rgb_matrix::AbstractMatrix{<:Colorant}, amrs::Vector{AMR}; speed::Real=0.1)
+    # 1. On prépare la matrice pour Makie (Transposer pour l'horizontal, Inverser pour le sens haut/bas)
+    # On définit une fonction de transformation pour éviter de répéter le code
+    prepare(m) = collect(reverse(transpose(m), dims=2))
+
+    display_matrix = Observable(prepare(base_rgb_matrix))
+    
+    # 2. Configuration de la figure
+    fig = Figure(size = (1200, 600)) 
+    ax = GLMakie.Axis(fig[1, 1], aspect = DataAspect(), title = "Suivi Flotte AMR - Temps Réel")
+    hidedecorations!(ax)
+    
+    # Correction du flou : interpolate = false
+    image!(ax, display_matrix, interpolate = false)
+    
+    Base.display(fig)
+    
+    max_steps = maximum(amr.departuretime + length(amr.road) for amr in amrs)
+    
+    for t in 1:max_steps
+        current_frame = copy(base_rgb_matrix)
+        
+        for amr in amrs
+            if amr.departuretime <= t <= length(amr.road) + amr.departuretime
+                step_idx = min(t - amr.departuretime +1 , length(amr.road) )
+                
+                # Correction ici : on extrait directement le tuple (y, x)
+                # Si road[step_idx] est déjà (y, x), pas besoin de [1]
+                pos = amr.road[step_idx]
+                y, x = pos[1], pos[2]
+                
+                if checkbounds(Bool, current_frame, y, x)
+                    current_frame[y, x] = amr.color
+                end
+            end
+        end
+        
+        # On applique la transformation avant la mise à jour de l'affichage
+        display_matrix[] = prepare(current_frame)
+        
+        sleep(speed)
+        
+        if !events(fig).window_open[] 
+            break 
+        end
     end
-    println(A)
 end
 
+#=
+TODO
+=#
+function displayMap(img::Matrix{RGB{Float64}})
 
-# TODO ATTENTION PAS VERIFIER
-function amrDisplay(carte_matrice, chemin, D, A)
-    # 1. On crée une copie de la carte (en Float pour gérer les couleurs)
-    # Imaginons que carte_matrice contient : 0 = Mur, 1 = Vide
-    grille_affichage = float.(carte_matrice)
+    # Répète chaque élément 20 fois sur les lignes et 20 fois sur les colonnes
+    img_large = repeat(img, inner=(20, 20))
+    save("labyrinthe_HD.png", img_large)
 
-    # 2. On dessine le chemin (on lui donne la valeur 0.5 par exemple)
-    for (x, y) in chemin
-        grille_affichage[x, y] = 0.5
-    end
-
-    # 3. On marque le Départ (D) et l'Arrivée (A)
-    grille_affichage[D[1], D[2]] = 0.25 # Valeur arbitraire pour une couleur distincte
-    grille_affichage[A[1], A[2]] = 0.75 
-
-    # 4. On génère l'image avec une heatmap
-    # yflip=true met (1,1) en haut à gauche (standard pour les matrices/cartes)
-    # aspect_ratio=:equal garantit que les cases sont carrées
-    p = heatmap(grille_affichage, 
-                color=:viridis, # Vous pouvez tester :grays, :inferno, etc.
-                yflip=true, 
-                legend=false, 
-                aspect_ratio=:equal,
-                title="Solution Pathfinding")
-    
-    # 5. On affiche la fenêtre
-    display(p)
 end

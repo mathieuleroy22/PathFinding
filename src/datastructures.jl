@@ -1,10 +1,21 @@
-# importation des différentes structures
-include("pointWeight.jl")
+#= -----------------------------------------------------------------------------
+PROJET : Simulation d'AMR (Autonomous Mobile Robots) | Path Finding
+FICHIER : datastructures.jl
+DESCRIPTION : 
+    Regroupe toutes les data structures utilisées dans le projet :
+    SafeInterval, Case, Instance, AMR
+
+AUTEUR : Mathieu LEROY
+DERNIÈRE MODIFICATION : 08 Avril 2026
+----------------------------------------------------------------------------- =#
+
+#----- Package -----
+using Colors
 
 # -----------------------------------------------------------------------------
 # data structure décrivant un intervalle de sécurité
 
-mutable struct SafeInterval
+struct SafeInterval
 
     id::Int64             # Pour distinguer les intervalles sur une même case
     start_t::Float64      # Temps où la case devient libre
@@ -89,6 +100,6 @@ struct AMR
     departuretime::Int64                                # temps auquel l'AMR a commencé sa tâche
     point::Tuple{Int64,Int64}                           # point où il se situe
     destination::Tuple{Int64,Int64}                     # destination de l'AMR
-    road::Vector{Tuple{Int64,Int64}}               # chemin que l'AMR
+    road::Vector{Tuple{Int64,Int64}}                    # chemin que l'AMR
 
 end

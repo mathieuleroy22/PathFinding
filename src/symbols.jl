@@ -1,3 +1,15 @@
+#= -----------------------------------------------------------------------------
+PROJET : Simulation d'AMR (Autonomous Mobile Robots) | Path Finding
+FICHIER : symbols.jl
+DESCRIPTION : 
+    Ce fichier permet de traduire les symboles soit en fonction
+    de leur poids soit en fonction de leur couleur.
+
+AUTEUR : Mathieu LEROY
+DERNIÈRE MODIFICATION : 08 Avril 2026
+----------------------------------------------------------------------------- =#
+
+#----- Packages -----
 using Images, Colors
 
 #= --------------------------------------------------------------

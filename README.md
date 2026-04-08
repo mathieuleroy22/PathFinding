@@ -17,7 +17,7 @@ Ce projet implémente un système de planification de chemins pour des robots mo
 ## Structure du projet
 
 ```
-project/
+PathFinding/
  │
  ├── src/                        # Code source Julia
  │   ├── algo.jl                 # Code des différents algorithmes de Path Finding (BFS, Glouton, Dijkstra, Astar)
@@ -58,7 +58,7 @@ Le fichier pkg.jl installera automatiquement les packages nécessaires.
 
 ### 3. Utilisation
 
-Exécuter la commande :
+Depuis le dossier "PathFinding/", exécuter la commande :
 
 &emsp; include("main.jl")
 

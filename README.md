@@ -60,7 +60,7 @@ Le fichier pkg.jl installera automatiquement les packages nécessaires.
 
 Depuis le dossier "PathFinding/", exécuter la commande :
 
-&emsp; include("main.jl")
+&emsp; include("src/main.jl")
 
 Exemple d'utilisation :
 

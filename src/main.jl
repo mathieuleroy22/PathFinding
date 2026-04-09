@@ -61,4 +61,4 @@ end
 
 # ----- TEST -----
 # println(main("version1-instance1.txt"))
-println(main("version2-instance1.txt"))
+# println(main("version2-instance1.txt"))

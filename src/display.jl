@@ -79,7 +79,7 @@ function exportMap(img::Matrix{RGB{Float64}})
 
     # Répète chaque élément 20 fois sur les lignes et 20 fois sur les colonnes
     img_large = repeat(img, inner=(20, 20))
-    save("out/colorMap.png", img_large)
+    save("res/colorMap.png", img_large)
 
     println("L'exportation est terminée. Fichier généré : colorMap.png")
 end
@@ -92,7 +92,7 @@ amrs | type : Vector{AMR} | exemple : [amr1, amr2, amr3] (Liste des robots plani
 =#
 function exportAMR(amrs::Vector{AMR})
     
-    open("out/resultatsAmr.txt", "w") do file                          # mode écriture (écrase s'il existe déjà)
+    open("res/resultatsAmr.txt", "w") do file                          # mode écriture (écrase s'il existe déjà)
         for amr in amrs
 
             # Extraction des informations basées sur le format ((x, y), t)
